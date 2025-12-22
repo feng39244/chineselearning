@@ -91,6 +91,23 @@ export function QuizMode() {
     return hint
   }
 
+  // Text-to-speech for writing quiz: Read the phrase when question is displayed
+  useEffect(() => {
+    if (quizType === "reverse" && quizCharacters.length > 0 && !feedback && !showAnswer) {
+      const currentCharacter = quizCharacters[currentIndex]
+      if (currentCharacter?.phrase) {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel()
+        
+        // Create and speak the phrase
+        const utterance = new SpeechSynthesisUtterance(currentCharacter.phrase)
+        utterance.lang = 'zh-CN' // Set language to Chinese
+        utterance.rate = 0.8 // Slightly slower for clarity
+        window.speechSynthesis.speak(utterance)
+      }
+    }
+  }, [currentIndex, quizType, quizCharacters, feedback, showAnswer])
+
   useEffect(() => {
     const fetchCharacters = async () => {
       try {
@@ -284,10 +301,34 @@ export function QuizMode() {
     })
 
     try {
+      // Save cumulative progress
       await fetch("/api/progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(progressToSave),
+      })
+
+      // Save quiz session history
+      const correctCount = sessionStats.reduce((sum, s) => sum + s.correct, 0)
+      const totalAttempts = sessionStats.reduce((sum, s) => sum + s.correct + s.incorrect, 0)
+      const accuracy = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0
+
+      const quizTypeLabels = {
+        recognition: "Read",
+        reverse: "Writing",
+        "multiple-choice": "Multiple Choice",
+      }
+
+      await fetch("/api/quiz-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          timestamp: Date.now(),
+          quizType: quizTypeLabels[quizType as keyof typeof quizTypeLabels] || quizType,
+          totalQuestions: quizCharacters.length,
+          correctAnswers: correctCount,
+          accuracy: accuracy,
+        }),
       })
     } catch (error) {
       console.error("Error saving progress:", error)

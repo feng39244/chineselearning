@@ -185,3 +185,6 @@ export function DrawingCanvas({ onClear, disabled = false }: DrawingCanvasProps)
 }
 
 
+
+
+

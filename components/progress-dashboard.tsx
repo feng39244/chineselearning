@@ -17,17 +17,27 @@ interface Progress {
   }
 }
 
+interface QuizSession {
+  timestamp: number
+  quizType: string
+  totalQuestions: number
+  correctAnswers: number
+  accuracy: number
+}
+
 export function ProgressDashboard() {
   const [characters, setCharacters] = useState<Character[]>([])
   const [progress, setProgress] = useState<Progress>({})
+  const [quizHistory, setQuizHistory] = useState<QuizSession[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [charsResponse, progressResponse] = await Promise.all([
+        const [charsResponse, progressResponse, historyResponse] = await Promise.all([
           fetch("/api/characters"),
           fetch("/api/progress"),
+          fetch("/api/quiz-history?limit=3"),
         ])
 
         if (charsResponse.ok) {
@@ -38,6 +48,11 @@ export function ProgressDashboard() {
         if (progressResponse.ok) {
           const progressData = await progressResponse.json()
           setProgress(progressData)
+        }
+
+        if (historyResponse.ok) {
+          const historyData = await historyResponse.json()
+          setQuizHistory(historyData)
         }
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -92,6 +107,27 @@ export function ProgressDashboard() {
     )
   }
 
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 60) {
+      return diffMins <= 1 ? "Just now" : `${diffMins} mins ago`
+    } else if (diffHours < 24) {
+      return diffHours === 1 ? "1 hour ago" : `${diffHours} hours ago`
+    } else if (diffDays === 1) {
+      return "Yesterday"
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`
+    } else {
+      return date.toLocaleDateString()
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -112,6 +148,62 @@ export function ProgressDashboard() {
           <p className="text-3xl font-bold text-orange-600">{overallStats.overallAccuracy}%</p>
         </Card>
       </div>
+
+      {quizHistory.length > 0 && (
+        <div>
+          <h3 className="font-semibold mb-4 text-lg">Recent Quiz Results</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {quizHistory.map((session, index) => (
+              <Card
+                key={session.timestamp}
+                className={`p-4 ${
+                  session.accuracy >= 90
+                    ? "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
+                    : session.accuracy >= 70
+                      ? "bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200"
+                      : "bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200"
+                }`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">{session.quizType}</p>
+                    <p className="text-xs text-gray-500">{formatDate(session.timestamp)}</p>
+                  </div>
+                  <p
+                    className={`text-2xl font-bold ${
+                      session.accuracy >= 90
+                        ? "text-green-600"
+                        : session.accuracy >= 70
+                          ? "text-blue-600"
+                          : "text-orange-600"
+                    }`}
+                  >
+                    {session.accuracy}%
+                  </p>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-600">
+                  <span>
+                    {session.correctAnswers} / {session.totalQuestions} correct
+                  </span>
+                  <span>{session.totalQuestions} questions</span>
+                </div>
+                <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${
+                      session.accuracy >= 90
+                        ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                        : session.accuracy >= 70
+                          ? "bg-gradient-to-r from-blue-500 to-cyan-600"
+                          : "bg-gradient-to-r from-orange-500 to-amber-600"
+                    }`}
+                    style={{ width: `${session.accuracy}%` }}
+                  />
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <h3 className="font-semibold mb-4 text-lg">Character Progress</h3>
