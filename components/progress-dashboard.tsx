@@ -149,9 +149,9 @@ export function ProgressDashboard() {
         </Card>
       </div>
 
-      {quizHistory.length > 0 && (
+      {quizHistory.length > 0 ? (
         <div>
-          <h3 className="font-semibold mb-4 text-lg">Recent Quiz Results</h3>
+          <h3 className="font-semibold mb-4 text-lg">Last 3 Quiz Results</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {quizHistory.map((session, index) => (
               <Card
@@ -203,38 +203,11 @@ export function ProgressDashboard() {
             ))}
           </div>
         </div>
-      )}
-
-      <div>
-        <h3 className="font-semibold mb-4 text-lg">Character Progress</h3>
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {stats.map((stat) => (
-            <Card key={stat.id} className="p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4 flex-1">
-                  <p className="text-3xl font-bold text-indigo-600 w-12">{stat.character}</p>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800">{stat.pinyin}</p>
-                    <p className="text-xs text-gray-600">{stat.meaning}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-gray-800">{stat.accuracy}%</p>
-                  <p className="text-xs text-gray-600">
-                    {stat.correct}/{stat.total}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-2 rounded-full transition-all"
-                  style={{ width: `${stat.accuracy}%` }}
-                />
-              </div>
-            </Card>
-          ))}
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-gray-600">No quiz history yet. Complete a quiz to see your results here!</p>
         </div>
-      </div>
+      )}
     </div>
   )
 }
