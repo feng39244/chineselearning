@@ -109,13 +109,24 @@ export async function POST(request: Request) {
       existingCharacters = parseCSV(content)
     }
 
-    // Merge new characters
-    const allCharacters = [...existingCharacters, ...newCharacters]
+    // Filter out duplicates - check if character already exists
+    const existingCharSet = new Set(existingCharacters.map(c => c.character))
+    const uniqueNewCharacters = newCharacters.filter((newChar: any) => {
+      return !existingCharSet.has(newChar.character)
+    })
+
+    // Merge only unique new characters
+    const allCharacters = [...existingCharacters, ...uniqueNewCharacters]
     
     // Write back to file
     fs.writeFileSync(charactersFile, toCSV(allCharacters), "utf-8")
 
-    return NextResponse.json({ success: true, count: allCharacters.length })
+    return NextResponse.json({ 
+      success: true, 
+      count: allCharacters.length,
+      added: uniqueNewCharacters.length,
+      skipped: newCharacters.length - uniqueNewCharacters.length
+    })
   } catch (error) {
     console.error("Error saving characters:", error)
     return NextResponse.json({ error: "Failed to save characters" }, { status: 500 })

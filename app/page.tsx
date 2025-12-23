@@ -95,7 +95,7 @@ export default function Home() {
                 : "bg-white text-indigo-600 hover:shadow-md"
             }`}
           >
-            Upload Characters
+            Manage Characters
           </button>
           <button
             onClick={() => setCurrentPage("quiz")}

@@ -67,11 +67,19 @@ export function CharacterUpload({ onUploadComplete }: CharacterUploadProps) {
       })
 
       if (response.ok) {
-        setCharacters([...characters, newChar])
-        setCharacter("")
-        setPinyin("")
-        setMeaning("")
-        setPhrase("")
+        const result = await response.json()
+        
+        if (result.skipped > 0) {
+          alert(`Character '${character}' already exists in your collection`)
+        } else {
+          // Refresh the character list from server
+          await fetchCharacters()
+          setCharacter("")
+          setPinyin("")
+          setMeaning("")
+          setPhrase("")
+          alert("Character added successfully!")
+        }
       } else {
         alert("Failed to save character")
       }
@@ -113,8 +121,22 @@ export function CharacterUpload({ onUploadComplete }: CharacterUploadProps) {
         })
 
         if (response.ok) {
-          setCharacters([...characters, ...newCharacters])
-          alert(`Uploaded ${newCharacters.length} characters`)
+          const result = await response.json()
+          // Refresh the character list from server to get the actual state
+          await fetchCharacters()
+          
+          if (result.skipped > 0) {
+            alert(
+              `Upload complete!\n` +
+              `Added: ${result.added} new character(s)\n` +
+              `Skipped: ${result.skipped} duplicate(s)`
+            )
+          } else {
+            alert(`Successfully uploaded ${result.added} character(s)`)
+          }
+          
+          // Reset file input so the same file can be uploaded again
+          e.target.value = ""
         } else {
           alert("Failed to upload characters")
         }
@@ -153,6 +175,30 @@ export function CharacterUpload({ onUploadComplete }: CharacterUploadProps) {
     a.click()
   }
 
+  const exportCharacters = () => {
+    if (characters.length === 0) {
+      alert("No characters to export")
+      return
+    }
+
+    // Create CSV content
+    const header = "Character,Pinyin,Meaning,Phrase"
+    const rows = characters.map(
+      (char) => `${char.character},${char.pinyin},${char.meaning},${char.phrase || ""}`
+    )
+    const csvContent = [header, ...rows].join("\n")
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    const date = new Date().toISOString().split("T")[0]
+    a.download = `my-characters-${date}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
   if (isLoading) {
     return (
       <div className="text-center py-12">
@@ -164,17 +210,29 @@ export function CharacterUpload({ onUploadComplete }: CharacterUploadProps) {
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-2">Upload Format</h3>
+        <h3 className="font-semibold text-blue-900 mb-2">Import & Export</h3>
         <p className="text-sm text-blue-800 mb-1">CSV format: Character, Pinyin, Meaning, Phrase (词组)</p>
         <p className="text-xs text-blue-700 mb-3">Note: Phrase is a word containing the character (e.g., 准备 for 备)</p>
-        <Button onClick={downloadCSVTemplate} variant="outline" size="sm">
-          Download CSV Template
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={downloadCSVTemplate} variant="outline" size="sm">
+            Download CSV Template
+          </Button>
+          <Button 
+            onClick={exportCharacters} 
+            variant="outline" 
+            size="sm"
+            className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+            disabled={characters.length === 0}
+          >
+            Export My Characters
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-2">CSV File</label>
+          <h3 className="font-semibold mb-3 text-lg">Import Characters</h3>
+          <label className="block text-sm font-medium mb-2">Upload CSV File</label>
           <input
             type="file"
             accept=".csv"
@@ -184,7 +242,7 @@ export function CharacterUpload({ onUploadComplete }: CharacterUploadProps) {
         </div>
 
         <div className="border-t pt-4">
-          <p className="text-sm font-medium text-gray-600 mb-4">Or add manually:</p>
+          <p className="text-sm font-medium text-gray-600 mb-4">Or add character manually:</p>
           <div className="space-y-3">
             <input
               type="text"
